@@ -3,8 +3,6 @@ Don't expect perfection.
 
 # Metadata Providers
 * R18.dev (Videos)
-* JAVLibrary (Videos) - Broken
-* JavTrailers (Videos)
 * AsianScreens (Actresses)
 * Warashi Asian Pornstars (Actresses)
 
