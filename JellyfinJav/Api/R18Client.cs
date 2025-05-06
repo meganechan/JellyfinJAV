@@ -1,17 +1,22 @@
 namespace JellyfinJav.Api
 {
+    using AngleSharp;
+    using AngleSharp.Dom;
+    using AngleSharp.Html.Dom;
+    using AngleSharp.Io;
+    using MediaBrowser.Controller.Entities;
+    using MediaBrowser.Controller.Entities.Movies;
+    using Newtonsoft.Json;
+    using Newtonsoft.Json.Linq;
     using System;
     using System.Collections.Generic;
     using System.Globalization;
     using System.Linq;
     using System.Net.Http;
     using System.Reflection.Metadata;
+    using System.Text.Json;
     using System.Text.RegularExpressions;
     using System.Threading.Tasks;
-    using AngleSharp;
-    using AngleSharp.Dom;
-    using AngleSharp.Html.Dom;
-    using Newtonsoft.Json;
 
     /// <summary>A web scraping client for r18.com.</summary>
     public static class R18Client
@@ -62,36 +67,43 @@ namespace JellyfinJav.Api
         /// <returns>A list of every matched video.</returns>
         public static async Task<IEnumerable<VideoResult>>? Search(string searchCode)
         {
-            HttpClient.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
-            HttpClient.DefaultRequestHeaders.AcceptEncoding.Add(new System.Net.Http.Headers.StringWithQualityHeaderValue("deflate"));
-            HttpClient.DefaultRequestHeaders.AcceptLanguage.Add(new System.Net.Http.Headers.StringWithQualityHeaderValue("en-US"));
-            HttpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.164 Safari/537.36");
-            HttpClient.DefaultRequestHeaders.Host = "r18.dev";
             var videos = new List<VideoResult>();
-            var jsonResponse = await HttpClient.GetAsync($"https://r18.dev/videos/vod/movies/detail/-/dvd_id={searchCode}/json");
-            string? contentId;
+            var client = new HttpClient();
+            var context = new BrowsingContext();
+                client.DefaultRequestHeaders.Host = "r18.dev";
+            client.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
+            client.DefaultRequestHeaders.AcceptEncoding.Add(new System.Net.Http.Headers.StringWithQualityHeaderValue("deflate"));
+            client.DefaultRequestHeaders.AcceptLanguage.Add(new System.Net.Http.Headers.StringWithQualityHeaderValue("en-US"));
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:138.0) Gecko/20100101 Firefox/138.0");
 
-            if (jsonResponse.IsSuccessStatusCode)
-            {
-                string json = await jsonResponse.Content.ReadAsStringAsync().ConfigureAwait(false);
-#pragma warning disable CS8600
-                dynamic jsonObj = JsonConvert.DeserializeObject(json);
-#pragma warning restore CS8600
-                contentId = jsonObj!["content_id"];
-                string large2Url = jsonObj!["images"]["jacket_image"]["large2"];
-                videos.Add(new VideoResult
+                var response = await client.GetAsync($"https://r18.dev/videos/vod/movies/detail/-/dvd_id={searchCode}/json");
+
+                if (response.IsSuccessStatusCode)
                 {
-                    Code = searchCode.ToUpper(),
-                    Id = contentId,
-                    Cover = new Uri(large2Url),
-                });
+                var jsonContent = await response.Content.ReadAsStringAsync();
+                var jsonObject = JObject.Parse(jsonContent);
+                    var contentId = jsonObject["content_id"].ToString();
+                var large2Url = jsonObject["images"]["jacket_image"]["large2"].ToString();
+                    videos.Add(new VideoResult
+                    {
+                        Code = searchCode.ToUpper(),
+                        Id = contentId,
+                        Cover = new Uri(large2Url),
+                    });
 
-                return videos;
-            }
-            else
-            {
-                return null;
-            }
+                    return videos;
+                }
+                else
+                {
+                    videos.Add(new VideoResult
+                    {
+                        Code = response.ToString(),
+                        Id = null,
+                        Cover = null,
+                    });
+
+                    return videos;
+                }
         }
 
         /// <summary>Searches for a video by jav code, and returns the first result.</summary>

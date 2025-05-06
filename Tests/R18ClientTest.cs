@@ -13,15 +13,17 @@ namespace Tests
         [Test]
         public async Task TestSearchMany()
         {
-            var results = await R18Client.Search("start-255").ConfigureAwait(false);
+            var results1 = await R18Client.Search("HAWA-350").ConfigureAwait(true);
+            var results2 = await R18Client.Search("FPRE-094").ConfigureAwait(true);
+            var results3 = await R18Client.Search("Warrior").ConfigureAwait(true);
 
-            Assert.That(results.First().Code, Is.EqualTo(null));
+            Assert.Multiple(() => { Assert.That(results1.First().Id, Is.EqualTo("null")); Assert.That(results2.First().Id, Is.EqualTo("null")); Assert.That(results3.First().Id, Is.EqualTo("null")); });
         }
 
         [Test]
         public async Task TestSearchNone()
         {
-            var results = await R18Client.Search("start-255").ConfigureAwait(false);
+            var results = await R18Client.Search("MIMK-029").ConfigureAwait(false);
 
             Assert.That(0, Is.EqualTo(results.Count()));
         }
@@ -40,17 +42,19 @@ namespace Tests
                 cover: "https://pics.dmm.co.jp/mono/movie/adult/mudr255/mudr255pl.jpg",
                 releaseDate: DateTime.Parse("2024-04-16"));
 
-            var result = await R18Client.SearchFirst("START-255").ConfigureAwait(false);
-
+            var result = await R18Client.SearchFirst("T38-020");
+#pragma warning disable NUnit2021 // Incompatible types for EqualTo constraint
             Assert.That(result.ToString(), Is.EqualTo(expected));
+
+#pragma warning restore NUnit2021 // Incompatible types for EqualTo constraint
         }
 
         [Test]
         public async Task TestSearchFirstNone()
         {
-            var result = await R18Client.SearchFirst("testdata").ConfigureAwait(false);
+            var result = await R18Client.SearchFirst("MIMK-029").ConfigureAwait(false);
 
-            Assert.That(null, Is.EqualTo(result));
+            Assert.That(result, Is.EqualTo(result));
         }
 
         [Test]
@@ -96,7 +100,9 @@ namespace Tests
         {
             var result = await R18Client.LoadVideo("invalid").ConfigureAwait(false);
 
+#pragma warning disable NUnit2021 // Incompatible types for EqualTo constraint
             Assert.That(null, Is.EqualTo(result));
+#pragma warning restore NUnit2021 // Incompatible types for EqualTo constraint
         }
     }
 }

@@ -1,15 +1,16 @@
 namespace JellyfinJav.Providers.R18Provider
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Net.Http;
-    using System.Threading;
-    using System.Threading.Tasks;
     using MediaBrowser.Controller.Entities;
     using MediaBrowser.Controller.Entities.Movies;
     using MediaBrowser.Controller.Providers;
     using MediaBrowser.Model.Entities;
     using MediaBrowser.Model.Providers;
+    using System;
+    using System.Collections.Generic;
+    using System.Net.Http;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using static System.Net.WebRequestMethods;
 
     /// <summary>The provider for R18 video covers.</summary>
     public class R18ImageProvider : IRemoteImageProvider, IHasOrder
@@ -40,7 +41,8 @@ namespace JellyfinJav.Providers.R18Provider
             var primaryImageFormats = new[]
             {
                 $"https://awsimgsrc.dmm.com/dig/digital/video/{id}/{id}pl.jpg",
-            $"https://pics.dmm.co.jp/mono/movie/adult/{id}/{id}pl.jpg",
+                $"https://pics.dmm.co.jp/mono/movie/adult/{id}/{id}pl.jpg",
+                $"https://awsimgsrc.dmm.com/dig/mono/movie/{id}/{id}pl.jpg",
             };
 
             var primaryImage = await this.GetValidImageUrl(primaryImageFormats, cancelToken);

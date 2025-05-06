@@ -104,16 +104,23 @@ namespace JellyfinJav.Providers.R18Provider
 
             this.logger.LogInformation("[JellyfinJav] R18 - Getting Code: " + javCode);
 
-            return from video in await R18Client.Search(javCode)!.ConfigureAwait(false)
-                   select new RemoteSearchResult
-                   {
-                       Name = video.Code,
-                       ProviderIds = new Dictionary<string, string>
-                       {
-                           { "R18", video.Id },
-                       },
-                       ImageUrl = video.Cover?.ToString(),
-                   };
+            var searchResults = await R18Client.Search(javCode);
+
+            if (searchResults == null || !searchResults.Any())
+            {
+                this.logger.LogInformation("[JellyfinJav] R18 - No results found for code: " + javCode);
+                return Array.Empty<RemoteSearchResult>(); // Return an empty collection, not null
+            }
+
+            return searchResults.Select(video => new RemoteSearchResult
+            {
+                Name = video.Code,
+                ProviderIds = new Dictionary<string, string>
+        {
+            { "R18", video.Id },
+        },
+                ImageUrl = video.Cover?.ToString(),
+            }).ToList();  // Convert to a List to avoid potential issues
         }
 
         /// <inheritdoc />
