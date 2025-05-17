@@ -65,45 +65,40 @@ namespace JellyfinJav.Api
         /// <summary>Searches for a video by jav code.</summary>
         /// <param name="searchCode">The jav code. Ex: ABP-001.</param>
         /// <returns>A list of every matched video.</returns>
-        public static async Task<IEnumerable<VideoResult>>? Search(string searchCode)
+        public static async Task<IEnumerable<VideoResult>> Search(string searchCode)
         {
             var videos = new List<VideoResult>();
             var client = new HttpClient();
             var context = new BrowsingContext();
-                client.DefaultRequestHeaders.Host = "r18.dev";
+
+            client.DefaultRequestHeaders.Host = "r18.dev";
             client.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
             client.DefaultRequestHeaders.AcceptEncoding.Add(new System.Net.Http.Headers.StringWithQualityHeaderValue("deflate"));
             client.DefaultRequestHeaders.AcceptLanguage.Add(new System.Net.Http.Headers.StringWithQualityHeaderValue("en-US"));
             client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:138.0) Gecko/20100101 Firefox/138.0");
 
-                var response = await client.GetAsync($"https://r18.dev/videos/vod/movies/detail/-/dvd_id={searchCode}/json");
+            var response = await client.GetAsync($"https://r18.dev/videos/vod/movies/detail/-/dvd_id={searchCode}/json");
 
-                if (response.IsSuccessStatusCode)
-                {
+            if (response.IsSuccessStatusCode)
+            {
                 var jsonContent = await response.Content.ReadAsStringAsync();
                 var jsonObject = JObject.Parse(jsonContent);
-                    var contentId = jsonObject["content_id"].ToString();
+                var contentId = jsonObject["content_id"].ToString();
                 var large2Url = jsonObject["images"]["jacket_image"]["large2"].ToString();
-                    videos.Add(new VideoResult
-                    {
-                        Code = searchCode.ToUpper(),
-                        Id = contentId,
-                        Cover = new Uri(large2Url),
-                    });
-
-                    return videos;
-                }
-                else
+                videos.Add(new VideoResult
                 {
-                    videos.Add(new VideoResult
-                    {
-                        Code = response.ToString(),
-                        Id = null,
-                        Cover = null,
-                    });
+                    Code = searchCode.ToUpper(),
+                    Id = contentId,
+                    Cover = new Uri(large2Url),
+                });
 
-                    return videos;
-                }
+                return videos;
+            }
+            else
+            {
+                // Return empty list if request fails
+                return videos;
+            }
         }
 
         /// <summary>Searches for a video by jav code, and returns the first result.</summary>
@@ -111,11 +106,11 @@ namespace JellyfinJav.Api
         /// <returns>The parsed video.</returns>
         public static async Task<Video?> SearchFirst(string searchCode)
         {
-            var results = await Search(searchCode)!.ConfigureAwait(false);
+            var results = await Search(searchCode);
 
             if (results.Any())
             {
-                return await LoadVideo(results.First().Id).ConfigureAwait(false);
+                return await LoadVideo(results.FirstOrDefault().Id);
             }
             else
             {
@@ -128,29 +123,37 @@ namespace JellyfinJav.Api
         /// <returns>The parsed video.</returns>
         public static async Task<Video?> LoadVideo(string id)
         {
-            var response = await HttpClient.GetAsync($"https://r18.dev/videos/vod/movies/detail/-/id={id}/").ConfigureAwait(false);
+            var client = new HttpClient();
+            var context = new BrowsingContext();
+
+            client.DefaultRequestHeaders.Host = "r18.dev";
+            client.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
+            client.DefaultRequestHeaders.AcceptEncoding.Add(new System.Net.Http.Headers.StringWithQualityHeaderValue("deflate"));
+            client.DefaultRequestHeaders.AcceptLanguage.Add(new System.Net.Http.Headers.StringWithQualityHeaderValue("en-US"));
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:138.0) Gecko/20100101 Firefox/138.0");
+
+            var response = await client.GetAsync($"https://r18.dev/videos/vod/movies/detail/-/combined={id}/json");
             if (!response.IsSuccessStatusCode)
             {
                 return null;
             }
+            
+            var jsonContent = await response.Content.ReadAsStringAsync();
+            var json = JObject.Parse(jsonContent);
 
-            string? html = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-            var doc = await Context.OpenAsync(req => req.Content(html)).ConfigureAwait(false);
 
-            string? code = doc.QuerySelector("#dvd-id")?.TextContent.Trim();
-            string? title = (doc.QuerySelector("#title")?.TextContent.Trim()?.Substring(doc.QuerySelector("#dvd-id")?.TextContent.Trim()?.Length ?? 0).TrimStart(':', ' ') ?? string.Empty).Trim();
-            var actresses = doc.QuerySelectorAll(".performer")
-                                   ?.Select(n => n.TextContent.Trim()).ToArray()
-                                    ?? Array.Empty<string>();
-            var genres = doc.QuerySelectorAll(".category")
-                    ?.SelectMany(n => n.QuerySelectorAll("a"))
-                    .Select(a => a.TextContent.Trim())
-                    .Where(genre => NotSaleGenre(genre))
-                    .ToArray() ?? Array.Empty<string>();
-            string? studio = doc.QuerySelector("#studio")?.TextContent.Trim();
-            string? cover = doc.QuerySelector("#jacket")?.GetAttribute("src");
+            string? code = json["dvd_id"]?.ToString() ?? "N/A";
+            string? title = json["title_en"]?.ToString() ?? "N/A";
+            var actresses = json["actresses"] != null
+                ? json["actresses"].Select(c => c["name_romaji"].ToString())
+                : new List<string>();
+            var genres = json["categories"] != null
+                ? json["categories"].Select(c => c["name_en"].ToString())
+                : new List<string>();
+            string? studio = json["label_name_en"].ToString();
+            string? cover = json["jacket_full_url"].ToString();
             string? boxArt = cover?.Replace("pl.jpg", "ps.jpg");
-            string dateString = doc!.QuerySelector("#release-date")!.TextContent;
+            string dateString = json["release_date"]?.ToString();
             DateTime releaseDate = DateTime.ParseExact(dateString, "yyyy-MM-dd", null);
 
             if (title is null || code is null)
