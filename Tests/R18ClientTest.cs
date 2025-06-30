@@ -42,7 +42,7 @@ namespace Tests
                 cover: "https://pics.dmm.co.jp/mono/movie/adult/mudr255/mudr255pl.jpg",
                 releaseDate: DateTime.Parse("2024-04-16"));
 
-            var result = await R18Client.SearchFirst("HUNTC-127");
+            var result = await R18Client.SearchFirst("START-357");
 #pragma warning disable NUnit2021 // Incompatible types for EqualTo constraint
             Assert.That(result.ToString(), Is.EqualTo(expected));
 #pragma warning restore NUnit2021 // Incompatible types for EqualTo constraint
@@ -51,7 +51,7 @@ namespace Tests
         [Test]
         public async Task TestSearchFirstNone()
         {
-            var result = await R18Client.SearchFirst("MIMK-029").ConfigureAwait(false);
+            var result = await R18Client.SearchFirst("START-357").ConfigureAwait(false);
 
             Assert.That(result, Is.EqualTo(result));
         }
